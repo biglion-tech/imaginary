@@ -702,6 +702,40 @@ Accepts: `image/*, multipart/form-data`. Content-Type: `image/*`
 - minampl `float`
 - field `string` - Only POST and `multipart/form` payloads
 
+#### GET | POST /biglion
+Accepts: `image/*, multipart/form-data`. Content-Type: `image/*`
+
+1. Crop by areawidth, areaheight, top, left
+2. Resize by width, height
+
+##### Allowed params
+
+- top `int` `required`
+- left `int`
+- areawidth `int` `required`
+- areaheight `int`
+- width `int`
+- height `int`
+- quality `int` (JPEG-only)
+- compression `int` (PNG-only)
+- type `string`
+- file `string` - Only GET method and if the `-mount` flag is present
+- url `string` - Only GET method and if the `-enable-url-source` flag is present
+- embed `bool`
+- force `bool`
+- rotate `int`
+- norotation `bool`
+- noprofile `bool`
+- stripmeta `bool`
+- flip `bool`
+- flop `bool`
+- extend `string`
+- background `string` - Example: `?background=250,20,10`
+- colorspace `string`
+- sigma `float`
+- minampl `float`
+- field `string` - Only POST and `multipart/form` payloads
+
 #### GET | POST /zoom
 Accepts: `image/*, multipart/form-data`. Content-Type: `image/*`
 
@@ -934,6 +968,7 @@ Self-documented JSON operation schema:
 - **resize** - Same as [`/resize`](#get--post-resize) endpoint.
 - **enlarge** - Same as [`/enlarge`](#get--post-enlarge) endpoint.
 - **extract** - Same as [`/extract`](#get--post-extract) endpoint.
+- **biglion** - Same as [`/biglion`](#get--post-extract) endpoint.
 - **rotate** - Same as [`/rotate`](#get--post-rotate) endpoint.
 - **flip** - Same as [`/flip`](#get--post-flip) endpoint.
 - **flop** - Same as [`/flop`](#get--post-flop) endpoint.
