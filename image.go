@@ -29,6 +29,7 @@ var OperationsMap = map[string]Operation{
 	"blur":           GaussianBlur,
 	"smartcrop":      SmartCrop,
 	"fit":            Fit,
+	"biglion":   			Biglion,
 }
 
 // Image stores an image binary buffer and its MIME type
@@ -396,4 +397,30 @@ func Process(buf []byte, opts bimg.Options) (out Image, err error) {
 
 	mime := GetImageMimeType(bimg.DetermineImageType(buf))
 	return Image{Body: buf, Mime: mime}, nil
+}
+
+func Biglion(buf []byte, o ImageOptions) (Image, error) {
+	if o.AreaWidth == 0 || o.AreaHeight == 0 {
+		return Image{}, NewError("Missing required params: areawidth or areaheight", BadRequest)
+	}
+
+	opts := BimgOptions(o)
+	opts.Top = o.Top
+	opts.Left = o.Left
+	opts.AreaWidth = o.AreaWidth
+	opts.AreaHeight = o.AreaHeight
+	opts.Width = 0
+	opts.Height = 0
+
+	image, err := Process(buf, opts)
+	if err != nil {
+		return Image{}, NewError("Something go wrong", BadRequest)
+	}
+	cropBuf := image.Body
+
+	o.NoCrop = true
+	opts.Width = o.Width
+	opts.Height = o.Height
+
+	return Process(cropBuf, opts)
 }
