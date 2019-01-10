@@ -186,33 +186,6 @@ func Extract(buf []byte, o ImageOptions) (Image, error) {
 	return Process(buf, opts)
 }
 
-func Biglion(buf []byte, o ImageOptions) (Image, error) {
-	if o.AreaWidth == 0 || o.AreaHeight == 0 {
-		return Image{}, NewError("Missing required params: areawidth or areaheight", BadRequest)
-	}
-
-	opts := BimgOptions(o)
-	opts.Top = o.Top
-	opts.Left = o.Left
-	opts.AreaWidth = o.AreaWidth
-	opts.AreaHeight = o.AreaHeight
-	opts.Width = 0
-	opts.Height = 0
-
-	image, err := Process(buf, opts)
-	if err != nil {
-		return Image{}, NewError("Something go wrong", BadRequest)
-	}
-	cropBuf := image.Body
-
-	o.NoCrop = true
-	resizeOpts := BimgOptions(o)
-	resizeOpts.Width = o.Width
-	resizeOpts.Height = o.Height
-
-	return Process(cropBuf, resizeOpts)
-}
-
 func Crop(buf []byte, o ImageOptions) (Image, error) {
 	if o.Width == 0 && o.Height == 0 {
 		return Image{}, NewError("Missing required param: height or width", BadRequest)
