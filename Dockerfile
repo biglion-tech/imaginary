@@ -3,7 +3,7 @@
 FROM ubuntu:16.04 as builder
 MAINTAINER tomas@aparicio.me
 
-ENV LIBVIPS_VERSION 8.5.6
+ENV LIBVIPS_VERSION 8.7.0
 
 # Installs libvips + required libraries
 RUN \
@@ -11,6 +11,7 @@ RUN \
   # Install dependencies
   apt-get update && \
   DEBIAN_FRONTEND=noninteractive apt-get install -y \
+  ca-certificates \
   automake build-essential curl \
   gobject-introspection gtk-doc-tools libglib2.0-dev libjpeg-turbo8-dev libpng12-dev \
   libwebp-dev libtiff5-dev libgif-dev libexif-dev libxml2-dev libpoppler-glib-dev \
@@ -19,7 +20,7 @@ RUN \
 
   # Build libvips
   cd /tmp && \
-  curl -OL https://github.com/jcupitt/libvips/releases/download/v${LIBVIPS_VERSION}/vips-${LIBVIPS_VERSION}.tar.gz && \
+  curl -OL https://github.com/libvips/libvips/releases/download/v${LIBVIPS_VERSION}/vips-${LIBVIPS_VERSION}.tar.gz && \
   tar zvxf vips-${LIBVIPS_VERSION}.tar.gz && \
   cd /tmp/vips-${LIBVIPS_VERSION} && \
   ./configure --enable-debug=no --without-python $1 && \
@@ -38,16 +39,16 @@ RUN \
 ENV PORT 9000
 
 # Go version to use
-ENV GOLANG_VERSION 1.9.2
+ENV GOLANG_VERSION 1.11.2
 
 # gcc for cgo
 RUN apt-get update && apt-get install -y \
-    gcc curl git libc6-dev make ca-certificates \
+    gcc curl git libc6-dev make \
     --no-install-recommends \
   && rm -rf /var/lib/apt/lists/*
 
 ENV GOLANG_DOWNLOAD_URL https://golang.org/dl/go$GOLANG_VERSION.linux-amd64.tar.gz
-ENV GOLANG_DOWNLOAD_SHA256 de874549d9a8d8d8062be05808509c09a88a248e77ec14eb77453530829ac02b
+ENV GOLANG_DOWNLOAD_SHA256 1dfe664fa3d8ad714bbd15a36627992effd150ddabd7523931f077b3926d736d
 
 RUN curl -fsSL --insecure "$GOLANG_DOWNLOAD_URL" -o golang.tar.gz \
   && echo "$GOLANG_DOWNLOAD_SHA256 golang.tar.gz" | sha256sum -c - \
@@ -68,7 +69,7 @@ RUN go get -u github.com/golang/dep/cmd/dep
 COPY . $GOPATH/src/github.com/h2non/imaginary
 
 # Compile imaginary
-RUN go build -race -o bin/imaginary github.com/h2non/imaginary
+RUN go build -o bin/imaginary github.com/h2non/imaginary
 
 FROM ubuntu:16.04
 
@@ -89,6 +90,7 @@ RUN \
 COPY --from=builder /usr/local/lib /usr/local/lib
 RUN ldconfig
 COPY --from=builder /go/bin/imaginary bin/
+COPY --from=builder /etc/ssl/certs /etc/ssl/certs
 
 # Server port to listen
 ENV PORT 9000

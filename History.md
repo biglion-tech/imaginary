@@ -1,4 +1,32 @@
 
+v1.0.15 / 2018-03-15
+====================
+
+  * fix(#188, #185): Install SSL CA certificates. 
+  * chore(Dockerfile): upgrade libvips to v8.6.3
+
+
+v1.0.14 / 2018-03-05
+====================
+
+  * Add Docker Compose note to README (#174)
+  * Fixes https by installing root CA certificates (#186)
+
+v1.0.13 / 2018-03-01
+====================
+
+  * feat(version): bump to v1.0.13
+  * feat(Docker): upgrade libvips to v8.6.2 (#184)
+  * feat(vendor): upgrade bimg to v1.0.18
+  * fix(debug): implement custom debug function
+  * feat: add docker-compose.yml
+  * Merge branch 'master' of https://github.com/h2non/imaginary
+  * refactor(vendor): remove go-debug package from vendor
+  * refactor(docs): remove codesponsor :(
+  * fix testdata image links (#173)
+  * Log hours in 24 hour clock (#165)
+  * refactor(docs): update CLI usage and minimum requirements
+
 v1.0.11 / 2017-11-14
 ====================
 

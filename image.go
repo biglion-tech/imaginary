@@ -4,7 +4,9 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"strings"
+	"io"
+	"io/ioutil"
+	"net/http"
 
 	"gopkg.in/h2non/bimg.v1"
 )
@@ -12,21 +14,21 @@ import (
 // OperationsMap defines the allowed image transformation operations listed by name.
 // Used for pipeline image processing.
 var OperationsMap = map[string]Operation{
-	"crop":      Crop,
-	"resize":    Resize,
-	"enlarge":   Enlarge,
-	"extract":   Extract,
-	"biglion":   Biglion,
-	"rotate":    Rotate,
-	"flip":      Flip,
-	"flop":      Flop,
-	"thumbnail": Thumbnail,
-	"zoom":      Zoom,
-	"convert":   Convert,
-	"watermark": Watermark,
-	"blur":      GaussianBlur,
-	"smartcrop": SmartCrop,
-	"fit":       Fit,
+	"crop":           Crop,
+	"resize":         Resize,
+	"enlarge":        Enlarge,
+	"extract":        Extract,
+	"rotate":         Rotate,
+	"flip":           Flip,
+	"flop":           Flop,
+	"thumbnail":      Thumbnail,
+	"zoom":           Zoom,
+	"convert":        Convert,
+	"watermark":      Watermark,
+	"watermarkImage": WatermarkImage,
+	"blur":           GaussianBlur,
+	"smartcrop":      SmartCrop,
+	"fit":            Fit,
 }
 
 // Image stores an image binary buffer and its MIME type
@@ -102,23 +104,51 @@ func Fit(buf []byte, o ImageOptions) (Image, error) {
 		return Image{}, NewError("Missing required params: height, width", BadRequest)
 	}
 
-	dims, err := bimg.Size(buf)
+	metadata, err := bimg.Metadata(buf)
 	if err != nil {
 		return Image{}, err
 	}
 
+	dims := metadata.Size
+
+	if (dims.Width == 0) || (dims.Height == 0) {
+		return Image{}, NewError("Width or height of requested image is zero", NotAcceptable)
+	}
+
+	// metadata.Orientation
+	// 0: no EXIF orientation
+	// 1: CW 0
+	// 2: CW 0, flip horizontal
+	// 3: CW 180
+	// 4: CW 180, flip horizontal
+	// 5: CW 90, flip horizontal
+	// 6: CW 270
+	// 7: CW 270, flip horizontal
+	// 8: CW 90
+
+	var originHeight, originWidth int
+	var fitHeight, fitWidth *int
+	if o.NoRotation || (metadata.Orientation <= 4) {
+		originHeight = dims.Height
+		originWidth = dims.Width
+		fitHeight = &o.Height
+		fitWidth = &o.Width
+	} else {
+		// width/height will be switched with autorotation
+		originWidth = dims.Height
+		originHeight = dims.Width
+		fitWidth = &o.Height
+		fitHeight = &o.Width
+	}
+
 	// if input ratio > output ratio
 	// (calculation multiplied through by denominators to avoid float division)
-	if dims.Width*o.Height > o.Width*dims.Height {
+	if originWidth*(*fitHeight) > (*fitWidth)*originHeight {
 		// constrained by width
-		if dims.Width != 0 {
-			o.Height = o.Width * dims.Height / dims.Width
-		}
+		*fitHeight = *fitWidth * originHeight / originWidth
 	} else {
 		// constrained by height
-		if dims.Height != 0 {
-			o.Width = o.Height * dims.Width / dims.Height
-		}
+		*fitWidth = *fitHeight * originWidth / originHeight
 	}
 
 	opts := BimgOptions(o)
@@ -292,6 +322,32 @@ func Watermark(buf []byte, o ImageOptions) (Image, error) {
 	return Process(buf, opts)
 }
 
+func WatermarkImage(buf []byte, o ImageOptions) (Image, error) {
+	if o.Image == "" {
+		return Image{}, NewError("Missing required param: image", BadRequest)
+	}
+	response, err := http.Get(o.Image)
+	if err != nil {
+		return Image{}, NewError(fmt.Sprintf("Unable to retrieve watermark image. %s", o.Image), BadRequest)
+	}
+	defer response.Body.Close()
+
+	bodyReader := io.LimitReader(response.Body, 1e6)
+
+	imageBuf, err := ioutil.ReadAll(bodyReader)
+	if len(imageBuf) == 0 {
+		return Image{}, NewError(fmt.Sprintf("Unable to read watermark image. %s", err.Error()), BadRequest)
+	}
+
+	opts := BimgOptions(o)
+	opts.WatermarkImage.Left = o.Left
+	opts.WatermarkImage.Top = o.Top
+	opts.WatermarkImage.Buf = imageBuf
+	opts.WatermarkImage.Opacity = o.Opacity
+
+	return Process(buf, opts)
+}
+
 func GaussianBlur(buf []byte, o ImageOptions) (Image, error) {
 	if o.Sigma == 0 && o.MinAmpl == 0 {
 		return Image{}, NewError("Missing required param: sigma or minampl", BadRequest)
@@ -310,13 +366,10 @@ func Pipeline(buf []byte, o ImageOptions) (Image, error) {
 
 	// Validate and built operations
 	for i, operation := range o.Operations {
-		// Normalize operation name
-		name := strings.TrimSpace(strings.ToLower(operation.Name))
-
 		// Validate supported operation name
 		var exists bool
 		if operation.Operation, exists = OperationsMap[operation.Name]; !exists {
-			return Image{}, NewError(fmt.Sprintf("Unsupported operation name: %s", name), BadRequest)
+			return Image{}, NewError(fmt.Sprintf("Unsupported operation name: %s", operation.Name), BadRequest)
 		}
 
 		// Parse and construct operation options

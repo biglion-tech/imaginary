@@ -4,11 +4,10 @@ sudo: required
 dist: trusty
 
 go:
-  - 1.9
-  - 1.8
-  - 1.7
-  - 1.6
-  - tip
+  - "1.11.x"
+  - "1.10.x"
+  - "1.9.x"
+  - "tip"
 
 env:
   - LIBVIPS=7.42
@@ -16,6 +15,8 @@ env:
   - LIBVIPS=8.3
   - LIBVIPS=8.4
   - LIBVIPS=8.5
+  - LIBVIPS=8.6
+  - LIBVIPS=8.7
   - LIBVIPS=master
 
 matrix:
@@ -23,6 +24,8 @@ matrix:
     - env: LIBVIPS=7.42
     - env: LIBVIPS=8.2
     - env: LIBVIPS=8.3
+    - env: LIBVIPS=master
+    - go: 1.8.x
 
 cache: apt
 
@@ -44,7 +47,7 @@ addons:
       - libwebp-dev
 
 before_install:
-  - wget https://github.com/jcupitt/libvips/archive/$LIBVIPS.zip
+  - wget https://github.com/libvips/libvips/archive/$LIBVIPS.zip
   - unzip $LIBVIPS
   - cd libvips-$LIBVIPS
   - test -f autogen.sh && ./autogen.sh || ./bootstrap.sh
